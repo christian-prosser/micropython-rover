@@ -1,2 +1,1 @@
 # micropython-rover
-django-gcharts
