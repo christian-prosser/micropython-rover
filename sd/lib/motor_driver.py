@@ -1,5 +1,14 @@
 import pyb
 
+MOTOR_A = 0
+MOTOR_B = 1
+MOTOR_AB = 2
+DIR_CW = 0
+DIR_CCW = 1
+HIGH = 1
+LOW = 0
+MAX_SPEED = 100
+
 
 class DualMotorDriver:
     """
@@ -10,65 +19,113 @@ class DualMotorDriver:
     motor B connected between B01 and B02
     """
 
-    def __init__(self):
-        self._stby = None  # standby
-        self._pwma = None  # speed control motor A
-        self._ain1 = None
-        self._ain2 = None
-        self._pwmb = None  # speed control motor B
-        self._bin1 = None
-        self._bin1 = None
+    def __init__(self, stby_pin=pyb.Pin.board.X3, ain1_pin=None, ain2_pin=None, pwma_pin=pyb.Pin.board.Y1, bin1_pin=None, bin2_pin=None, pwmb_pin=pyb.Pin.board.Y2):
+        self._stby = stby_pin  # standby
+
+        # Motor A
+        self._ain1 = ain1_pin
+        self._ain2 = ain2_pin
+        self._pwma = pwma_pin
+
+        # Motor B
+        self._bin1 = bin1_pin
+        self._bin2 = bin2_pin
+        self._pwmb = pwmb_pin
 
         self._stby.init(pyb.Pin.OUT_PP)
-        self._pwma.init(pyb.Pin.OUT_PP)
-
-
-        timer = pyb.Timer(2, freq=1000)
-        ch = timer.channel(1, pyb.Timer.PWM, pin=pyb.Pin('X1'))  # X1 has TIM2, CH1
-        ch.pulse_width_percent(50)
-
-        timer = pyb.Timer(2, freq=1000)
-        ch2 = timer.channel(2, pyb.Timer.PWM, pin=pyb.Pin.board.X2, pulse_width=210000)
-        ch3 = timer.channel(3, pyb.Timer.PWM, pin=pyb.Pin.board.X3, pulse_width=420000)
 
         self._ain1.init(pyb.Pin.OUT_PP)
         self._ain2.init(pyb.Pin.OUT_PP)
-        self._pwmb.init(pyb.Pin.OUT_PP)
+
         self._bin1.init(pyb.Pin.OUT_PP)
-        self._bin1.init(pyb.Pin.OUT_PP)
+        self._bin2.init(pyb.Pin.OUT_PP)
+
+        timer = pyb.Timer(2, freq=1000)
+        self._pwma_ch = timer.channel(2, pyb.Timer.PWM, pin=self._pwma, pulse_width=210000)
+        self._pwmb_ch = timer.channel(3, pyb.Timer.PWM, pin=self._pwmb, pulse_width=420000)
 
     def demo(self):
-        self.move(1, 255, 1)  # motor 1, full speed CCW
-        self.move(2, 255, 1)  # motor 2, full speed CCW
+        self.move(MOTOR_A, 255, DIR_CCW)  # motor 1, full speed CCW
+        self.move(MOTOR_B, 255, DIR_CCW)  # motor 2, full speed CCW
 
-        pyb.delay(1000)  # go for 1 second
-        self.stop()  # stop
-        pyb.delay(250)  # hold for 250ms until move again
+        # pyb.delay(1000)  # go for 1 second
+        # self.standby()  # enter standby
+        # pyb.delay(250)  # hold for 250ms until move again
+        #
+        # self.move(MOTOR_A, 128, DIR_CW)  # motor A, half speed CW
+        # self.move(MOTOR_B, 128, DIR_CW)  # motor B, half speed CW
 
-        self.move(1, 128, 0)  # motor 1, half speed CW
-        self.move(2, 128, 0)  # motor 2, half speed CW
+        pyb.delay(2000)
+        self.stop(MOTOR_AB)
+        self.standby()
 
-        pyb.delay(1000)
-        self.stop()
-        pyb.delay(250)
+# | Input                         | Output
+# | IN1     IN2     PWM     STBY  | OUT1    OUT2         Mode
+# |-------------------------------|---------------------------------
+# | H       H       H/L     H     | L       L            Short brake
+# | L       H       L       H     | L       L            Short brake
+# | H       L       L       H     | L       L            Short brake
+# | L       H       H       H     | L       H            CCW
+# | H       L       H       H     | H       L            CW
+# | L       L       H       H     | OFF (High impedance) Stop
+# | H/L     H/L     H/L     L     | OFF (High impedance) Standby
 
-    def move(self, motor, speed, direction):
-        """
-        Move specific motor at speed and direction
-        motor: 0 for B 1 for A
-        speed: 0 is off, and 255 is full speed
-        direction: 0 clockwise, 1 counter-clockwise
-        """
+    def start_up(self):
         self._stby.high()  # disable standby
 
-        if motor == 1:
+    def short_brake(self, motor):
+        self._stby.high()
+        if motor in [MOTOR_A, MOTOR_AB]:
+            self._ain1.high()
+            self._ain2.high()
+            #TODO maybe this should be the pwma_ch not the pin
+            self._pwma.pulse_width_percent(LOW)
+        if motor in [MOTOR_B, MOTOR_AB]:
+            self._bin1.high()
+            self._bin2.high()
+            self._pwmb.pulse_width_percent(LOW)
+
+    def stop(self, motor, brake_for=50):
+        self.short_brake(motor)
+        pyb.delay(brake_for)
+        if motor in [MOTOR_A, MOTOR_AB]:
+            self._ain1.low()
+            self._ain2.low()
+            self._pwma.pulse_width_percent(100)
+        if motor in [MOTOR_B, MOTOR_AB]:
+            self._bin1.low()
+            self._bin2.low()
+            self._pwmb.pulse_width_percent(100)
+
+    def standby(self):
+        self._stby.low()  # enable standby
+
+    def move(self, motor, speed, direction=DIR_CW):
+        """
+        Move specific motor at speed and direction (defaults to clockwise)
+        :param motor: 0 for A 1 for B, 2 for both A and B
+        :param speed: 0 is off, and 100 is full speed (-ve speed reverses direction)
+        :param direction: 0 clockwise, 1 counter-clockwise
+        :return:
+        """
+        self.start_up()
+
+        # -ve speed reverses direction
+        if speed < 0:
+            direction = not direction
+            speed = abs(speed)
+
+        if speed == 0:
+            self.short_brake(motor)
+            self.stop(motor)
+        elif speed > MAX_SPEED:
+            speed = MAX_SPEED
+
+        if motor in [MOTOR_A, MOTOR_AB]:
             self._ain1.value(direction)
             self._ain2.value(not direction)
-            analogWrite(PWMA, speed)
-        else:
+            self._pwma.pulse_width_percent(speed)
+        if motor in [MOTOR_B, MOTOR_AB]:
             self._bin1.value(direction)
             self._bin2.value(not direction)
-            analogWrite(PWMB, speed)
-
-    def stop(self):
-        self._stby.low()  # enable standby
+            self._pwmb.pulse_width_percent(speed)
