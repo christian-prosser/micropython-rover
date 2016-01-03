@@ -122,7 +122,7 @@ pyb.repl_uart(uart)
 servo1 = pyb.Servo(1)
 servo2 = pyb.Servo(2)
 
-def check_servos(limits1=[50, -50], limits2=[5 ,-90]):
+def check_servos(limits1=(50, -50), limits2=(5 ,-90)):
     while True:
         for i in range(2):
             servo1.angle(limits1[i])
