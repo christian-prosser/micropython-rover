@@ -83,6 +83,7 @@ class DualMotorDriver:
         if motor in [MOTOR_B, MOTOR_AB]:
             self._bin1.high()
             self._bin2.high()
+            #TODO maybe this should be the pwmb_ch not the pin
             self._pwmb.pulse_width_percent(LOW)
 
     def stop(self, motor, brake_for=50):
