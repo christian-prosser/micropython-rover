@@ -78,13 +78,11 @@ class DualMotorDriver:
         if motor in [MOTOR_A, MOTOR_AB]:
             self._ain1.high()
             self._ain2.high()
-            #TODO maybe this should be the pwma_ch not the pin
-            self._pwma.pulse_width_percent(LOW)
+            self._pwma_ch.pulse_width_percent(LOW)
         if motor in [MOTOR_B, MOTOR_AB]:
             self._bin1.high()
             self._bin2.high()
-            #TODO maybe this should be the pwmb_ch not the pin
-            self._pwmb.pulse_width_percent(LOW)
+            self._pwmb_ch.pulse_width_percent(LOW)
 
     def stop(self, motor, brake_for=50):
         self.short_brake(motor)
@@ -92,11 +90,11 @@ class DualMotorDriver:
         if motor in [MOTOR_A, MOTOR_AB]:
             self._ain1.low()
             self._ain2.low()
-            self._pwma.pulse_width_percent(100)
+            self._pwma_ch.pulse_width_percent(100)
         if motor in [MOTOR_B, MOTOR_AB]:
             self._bin1.low()
             self._bin2.low()
-            self._pwmb.pulse_width_percent(100)
+            self._pwmb_ch.pulse_width_percent(100)
 
     def standby(self):
         self._stby.low()  # enable standby
@@ -125,8 +123,8 @@ class DualMotorDriver:
         if motor in [MOTOR_A, MOTOR_AB]:
             self._ain1.value(direction)
             self._ain2.value(not direction)
-            self._pwma.pulse_width_percent(speed)
+            self._pwma_ch.pulse_width_percent(speed)
         if motor in [MOTOR_B, MOTOR_AB]:
             self._bin1.value(direction)
             self._bin2.value(not direction)
-            self._pwmb.pulse_width_percent(speed)
+            self._pwmb_ch.pulse_width_percent(speed)
