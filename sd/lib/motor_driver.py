@@ -19,7 +19,7 @@ class DualMotorDriver:
     motor B connected between B01 and B02
     """
 
-    def __init__(self, stby_pin=pyb.Pin.board.X3, ain1_pin=None, ain2_pin=None, pwma_pin=pyb.Pin.board.Y1, bin1_pin=None, bin2_pin=None, pwmb_pin=pyb.Pin.board.Y2):
+    def __init__(self, stby_pin=pyb.Pin.board.X17, ain1_pin=pyb.Pin.board.Y6, ain2_pin=pyb.Pin.board.Y5, pwma_pin=pyb.Pin.board.Y7, bin1_pin=pyb.Pin.board.X11, bin2_pin=pyb.Pin.board.X12, pwmb_pin=pyb.Pin.board.Y8):
         self._stby = stby_pin  # standby
 
         # Motor A
@@ -40,22 +40,22 @@ class DualMotorDriver:
         self._bin1.init(pyb.Pin.OUT_PP)
         self._bin2.init(pyb.Pin.OUT_PP)
 
-        timer = pyb.Timer(2, freq=1000)
-        self._pwma_ch = timer.channel(2, pyb.Timer.PWM, pin=self._pwma, pulse_width=210000)
-        self._pwmb_ch = timer.channel(3, pyb.Timer.PWM, pin=self._pwmb, pulse_width=420000)
+        timer = pyb.Timer(12, freq=1000)
+        self._pwma_ch = timer.channel(1, pyb.Timer.PWM, pin=self._pwma, pulse_width=210000)
+        self._pwmb_ch = timer.channel(2, pyb.Timer.PWM, pin=self._pwmb, pulse_width=420000)
 
     def demo(self):
         self.move(MOTOR_A, 255, DIR_CCW)  # motor 1, full speed CCW
         self.move(MOTOR_B, 255, DIR_CCW)  # motor 2, full speed CCW
 
-        # pyb.delay(1000)  # go for 1 second
+        pyb.delay(1000)  # go for 1 second
         # self.standby()  # enter standby
         # pyb.delay(250)  # hold for 250ms until move again
         #
-        # self.move(MOTOR_A, 128, DIR_CW)  # motor A, half speed CW
-        # self.move(MOTOR_B, 128, DIR_CW)  # motor B, half speed CW
+        self.move(MOTOR_A, 255, DIR_CW)  # motor A, half speed CW
+        self.move(MOTOR_B, 255, DIR_CW)  # motor B, half speed CW
 
-        pyb.delay(2000)
+        pyb.delay(1000)
         self.stop(MOTOR_AB)
         self.standby()
 
